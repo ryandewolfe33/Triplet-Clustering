@@ -1,21 +1,19 @@
-import scipy.sparse
+import scipy.sparse as sp
 import numpy as np
 import pynndescent
-import sknetwork.clustering
-from numba import jit
-
+from numba import njit
 from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.utils import check_array
-
 import warnings
 
+from .clustering_utils import hslc, prune_clusters
 
-@jit
+@njit
 def size_of_union(a, b):
     return len(a) + len(b) - len(np.intersect1d(a, b))
 
 
-@jit(nopython=True)  # Already optimial parralized
+@njit  # Already optimal parallelized
 def make_other_knn_uxy_sizes(knn):
     other_sizes = np.empty_like(knn)
     cache = dict()
@@ -30,7 +28,7 @@ def make_other_knn_uxy_sizes(knn):
     return other_sizes
 
 
-@jit(nopython=True, parallel=True)
+@njit
 def make_n_closer_than(knn, knn_dist):
     this_dist = np.empty(
         (knn.shape[0], knn.shape[1], knn.shape[1]), dtype=knn_dist.dtype
@@ -70,12 +68,20 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
     n_neighbors : int, default=100
 
     metric : string, default="cosine"
-             Passed to pynndescent metric so a wide range of options are supported.
+        Passed to pynndescent metric so a wide range of options are supported.
 
-    thresh : float or string, default=0.5
-             To cut down the cohesion graph for clustering, if thresh is a float remove
-             the bottom thresh percentile of weights from the graph. If thresh="strong", drop
-             edge weights below the PALD threshhold, equal to half the mean of the self cohesion.
+    threshold : float or string
+        To cut down the cohesion graph for clustering. If thresh is a float remove
+        the bottom thresh percentile of weights from the graph.
+
+    cluster_selection_method: string, default="cc"
+        Specify the method for selecting clusters from the pruned symmetric cohesion graph.
+        Choose between "cc" for connected components and one of "eom" or "flat" for 
+        hierarchical single linkage.
+
+    min_cluster_size: int, default=1
+        Drop clusters smaller than the minimum cluster size. This parameter is passed to the
+        hierarchical single linkage methods, or applied after the average threshold.
 
     Attributes
     ----------
@@ -90,10 +96,12 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
         Can be thought of a complete weighted directed graph on n_samples vertices.
     """
 
-    def __init__(self, n_neighbors=100, metric="cosine", thresh=0.5):
+    def __init__(self, n_neighbors=100, metric="euclidean", cluster_selection_method="eom", threshold=None, min_cluster_size=1):
         self.n_neighbors = n_neighbors
         self.metric = metric
-        self.thresh = thresh
+        self.cluster_selection_method = cluster_selection_method
+        self.threshold = threshold
+        self.min_cluster_size = min_cluster_size
 
     def fit(self, X, y=None):
         """
@@ -112,53 +120,53 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
         Returns
         -------
 
-        self : PALD
+        self : PAKNNLD
                For compatibility with sklearn api.
-
         """
         X = check_array(X)
         n_neighbors = self.n_neighbors
         if n_neighbors > X.shape[0]:
             warnings.warn(
-                "Asked for more neighbors that data points, defaulting to n_neighbors = n points."
+                "Asked for more neighbors that data points, defaulting to n_neighbors = n points. Consider using the PALD object for exact computations."
             )
             n_neighbors = X.shape[0]
 
-        index = pynndescent.NNDescent(X, metric=self.metric, n_neighbors=n_neighbors)
-        knn = index.neighbor_graph[0]
-        knn_dist = index.neighbor_graph[1]
+        query_n_neighbors = min(5, self.n_neighbors//5)
+        index = pynndescent.NNDescent(X, n_neighbors=query_n_neighbors, metric=self.metric)
+        knn, knn_dist = index.query(X, k=self.n_neighbors)
 
         other_knn_uxy_sizes = make_other_knn_uxy_sizes(knn)
         n_closer_than = make_n_closer_than(knn, knn_dist)
         cohesion = n_closer_than / other_knn_uxy_sizes
 
-        row = np.repeat(np.arange(knn.shape[0]), knn.shape[1])
-        col = knn.flatten()
-        data = cohesion.flatten()
-        self.cohesion_ = scipy.sparse.coo_matrix((data, (row, col)))
-
+        self.cohesion_ = sp.lil_array((X.shape[0], X.shape[0]), dtype=cohesion.dtype)
+        for i in range(knn.shape[0]):
+            self.cohesion_[i, knn[i, :]] = cohesion[i, :]
+        self.cohesion_ = self.cohesion_.tocsr()
         symmetric_cohesion = self.cohesion_.minimum(self.cohesion_.transpose())
-        if self.thresh == "strong":
-            thresh = np.mean(symmetric_cohesion.diagonal()) / 2
-            symmetric_cohesion.data = np.where(
-                symmetric_cohesion.data > thresh, symmetric_cohesion.data, 0
-            )
-        elif self.thresh:
-            symmetric_cohesion.data = np.where(
-                symmetric_cohesion.data
-                > np.quantile(symmetric_cohesion.data, self.thresh),
-                symmetric_cohesion.data,
-                0,
-            )
+
+        if self.threshold is not None:
+            threshold = np.quantile(symmetric_cohesion.data, self.threshold)
+        else:
+            threshold = 0
+        
+        if threshold > 0:
+            symmetric_cohesion.data[symmetric_cohesion.data < threshold] = 0
+            symmetric_cohesion.eliminate_zeros()
         symmetric_cohesion.setdiag(0)
         symmetric_cohesion.eliminate_zeros()
 
-        # Check if matrix is empty
-        if len(symmetric_cohesion.data) == 0:
+        if len(symmetric_cohesion.data) == 0: # Matrix may be empty
             self.labels_ = np.arange(symmetric_cohesion.shape[0])
+        elif self.cluster_selection_method == "cc":
+            self.labels_ = sp.csgraph.connected_components(symmetric_cohesion)[1]
+        elif self.cluster_selection_method in ["eom", "leaf"]:
+            self.labels_, self.condensed_tree_ = hslc(self.cohesion_, self.cluster_selection_method, self.min_cluster_size)
         else:
-            leiden = sknetwork.clustering.Leiden(n_aggregations=3)
-            self.labels_ = leiden.fit_predict(symmetric_cohesion)
+            raise ValueError(f"cluster_selection_method should be one of 'cc', 'eom', or 'leaf'. Got {self.cluster_selection_method}")
+
+        if self.min_cluster_size > 1 and self.cluster_selection_method not in ['eom', 'leaf']:
+            prune_clusters(self.labels_, self.min_cluster_size)
 
         self.n_features_in_ = X.shape[1]
         self.is_fitted_ = True

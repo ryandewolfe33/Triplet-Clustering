@@ -1,9 +1,8 @@
 import pytest
 import numpy as np
-
 from sklearn.utils.estimator_checks import check_estimator
 
-from pald import PALD
+from tripletclustering import PALD
 
 
 @pytest.fixture
@@ -27,9 +26,15 @@ def data():
 def test_pald_internals(data):
     pald = PALD()
     pald.fit(data)
-
     assert hasattr(pald, "is_fitted_")
     np.testing.assert_equal(pald.labels_, [0, 0, 0, 0, 1, 1, 1, 2])
+
+
+def test_pald_eom(data):
+    pald = PALD(cluster_selection_method="eom", min_cluster_size=2)
+    pald.fit(data)
+    assert hasattr(pald, "is_fitted_")
+    np.testing.assert_equal(pald.labels_, [0, 0, 0, 0, 1, 1, 1, -1])
 
 
 def test_pald_is_sklearn_estimator():
