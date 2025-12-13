@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triplet-clustering"
+version = "0.2.1"
+authors = [
+  { name="Ryan DeWolfe", email="ryandewolfe33@gmail.com" },
+]
+description = "Triplet Comparison Based Clustering"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+requires-python = ">=3.10"
+dependencies = [
+    "numpy >= 2.0",
+    "scipy >= 1.16",
+    "numba >= 0.60.0",
+    "scikit-learn >= 1.6",
+    "pynndescent >= 0.5.3",
+    "fast_hdbscan >= 0.2.2",
+]
+
+[tool.setuptools]
+packages = ["tripletclustering"]
+
+[tool.pytest]
+minversion = "9.0"
+addopts = ["-ra", "-q"]
+testpaths = [
+    "tests",
+]

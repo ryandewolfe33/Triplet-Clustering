@@ -111,7 +111,7 @@ class PALD(ClusterMixin, BaseEstimator):
 
         """
         if self.metric == "precomputed":
-            X = check_array(X, force_all_finite=False)
+            X = check_array(X, ensure_all_finite=False)
             D = X
         else:
             X = check_array(X)
