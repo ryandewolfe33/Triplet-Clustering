@@ -8,6 +8,7 @@ import warnings
 
 from .clustering_utils import hslc, prune_clusters
 
+
 @njit
 def size_of_union(a, b):
     return len(a) + len(b) - len(np.intersect1d(a, b))
@@ -76,12 +77,18 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
 
     cluster_selection_method: string, default="cc"
         Specify the method for selecting clusters from the pruned symmetric cohesion graph.
-        Choose between "cc" for connected components and one of "eom" or "flat" for 
+        Choose between "cc" for connected components and one of "eom" or "flat" for
         hierarchical single linkage.
 
     min_cluster_size: int, default=1
         Drop clusters smaller than the minimum cluster size. This parameter is passed to the
         hierarchical single linkage methods, or applied after the average threshold.
+
+    random_state: int, RandomState instance or None, optional (default: None)
+        If int, random_state is the seed used by the random number generator;
+        If RandomState instance, random_state is the random number generator;
+        If None, the random number generator is the RandomState instance used
+        by `np.random`.
 
     Attributes
     ----------
@@ -96,12 +103,21 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
         Can be thought of a complete weighted directed graph on n_samples vertices.
     """
 
-    def __init__(self, n_neighbors=100, metric="euclidean", cluster_selection_method="eom", threshold=None, min_cluster_size=1):
+    def __init__(
+        self,
+        n_neighbors=100,
+        metric="euclidean",
+        cluster_selection_method="eom",
+        threshold=None,
+        min_cluster_size=1,
+        random_state=None,
+    ):
         self.n_neighbors = n_neighbors
         self.metric = metric
         self.cluster_selection_method = cluster_selection_method
         self.threshold = threshold
         self.min_cluster_size = min_cluster_size
+        self.random_state = random_state
 
     def fit(self, X, y=None):
         """
@@ -131,8 +147,13 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
             )
             n_neighbors = X.shape[0]
 
-        query_n_neighbors = min(5, self.n_neighbors//5)
-        index = pynndescent.NNDescent(X, n_neighbors=query_n_neighbors, metric=self.metric)
+        query_n_neighbors = min(5, self.n_neighbors // 5)
+        index = pynndescent.NNDescent(
+            X,
+            n_neighbors=query_n_neighbors,
+            metric=self.metric,
+            random_state=self.random_state,
+        )
         knn, knn_dist = index.query(X, k=self.n_neighbors)
 
         other_knn_uxy_sizes = make_other_knn_uxy_sizes(knn)
@@ -149,23 +170,30 @@ class PAKNNLD(ClusterMixin, BaseEstimator):
             threshold = np.quantile(symmetric_cohesion.data, self.threshold)
         else:
             threshold = 0
-        
+
         if threshold > 0:
             symmetric_cohesion.data[symmetric_cohesion.data < threshold] = 0
             symmetric_cohesion.eliminate_zeros()
         symmetric_cohesion.setdiag(0)
         symmetric_cohesion.eliminate_zeros()
 
-        if len(symmetric_cohesion.data) == 0: # Matrix may be empty
+        if len(symmetric_cohesion.data) == 0:  # Matrix may be empty
             self.labels_ = np.arange(symmetric_cohesion.shape[0])
         elif self.cluster_selection_method == "cc":
             self.labels_ = sp.csgraph.connected_components(symmetric_cohesion)[1]
         elif self.cluster_selection_method in ["eom", "leaf"]:
-            self.labels_, self.condensed_tree_ = hslc(self.cohesion_, self.cluster_selection_method, self.min_cluster_size)
+            self.labels_, self.condensed_tree_ = hslc(
+                self.cohesion_, self.cluster_selection_method, self.min_cluster_size
+            )
         else:
-            raise ValueError(f"cluster_selection_method should be one of 'cc', 'eom', or 'leaf'. Got {self.cluster_selection_method}")
+            raise ValueError(
+                f"cluster_selection_method should be one of 'cc', 'eom', or 'leaf'. Got {self.cluster_selection_method}"
+            )
 
-        if self.min_cluster_size > 1 and self.cluster_selection_method not in ['eom', 'leaf']:
+        if self.min_cluster_size > 1 and self.cluster_selection_method not in [
+            "eom",
+            "leaf",
+        ]:
             prune_clusters(self.labels_, self.min_cluster_size)
 
         self.n_features_in_ = X.shape[1]

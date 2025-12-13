@@ -22,18 +22,18 @@ def cohesion(D, progress_bar):
             wi = 0
             n_uij = 0
             for k in range(n):
-                if D[i,k] <= D[i,j] or D[j,k] <= D[i,j]:
+                if D[i, k] <= D[i, j] or D[j, k] <= D[i, j]:
                     n_uij += 1
-            #assert n_uij > 0
+            # assert n_uij > 0
             for k in range(n):
-                if D[i,k] <= D[i,j] or D[j,k] <= D[i,j]:
-                    if D[i,k] < D[j,k]:
-                        C[i,k] += 1 / n_uij
-                    elif D[j,k] < D[i,k]:
-                        C[j,k] += 1 / n_uij
+                if D[i, k] <= D[i, j] or D[j, k] <= D[i, j]:
+                    if D[i, k] < D[j, k]:
+                        C[i, k] += 1 / n_uij
+                    elif D[j, k] < D[i, k]:
+                        C[j, k] += 1 / n_uij
                     else:
-                        C[i,k] += 0.5 / n_uij
-                        C[j,k] += 0.5 / n_uij
+                        C[i, k] += 0.5 / n_uij
+                        C[j, k] += 0.5 / n_uij
             progress_bar.update()
     C = C / (n - 1)
     return C
@@ -53,7 +53,7 @@ class PALD(ClusterMixin, BaseEstimator):
 
     metric : string, default="euclidean"
         Passed to sklearn.metrics.pairwise_distances so a wide range of options are supported.
-    
+
     cluster_selection_method: string, default="strong"
         Choose between particularly strong cohesion (like in the PALD paper), a user specified
         threshold, and hierarchical single linkage based methods of 'eom' and 'leaf'.
@@ -71,7 +71,7 @@ class PALD(ClusterMixin, BaseEstimator):
 
     Attributes
     ----------
-    
+
     labels_ : array-like of shape (n_samples,)
         An array of labels for the data samples; this is a integer array as per other scikit-learn
         clustering algorithms. A value of -1 indicates that a point is a noise point and
@@ -82,12 +82,19 @@ class PALD(ClusterMixin, BaseEstimator):
         Can be thought of a complete weighted directed graph on n_samples vertices.
     """
 
-    def __init__(self, metric="euclidean", cluster_selection_method="strong", threshold=None, min_cluster_size=1, verbose=False):
+    def __init__(
+        self,
+        metric="euclidean",
+        cluster_selection_method="strong",
+        threshold=None,
+        min_cluster_size=1,
+        verbose=False,
+    ):
         self.metric = metric
         self.threshold = threshold
         self.cluster_selection_method = cluster_selection_method
         self.min_cluster_size = min_cluster_size
-        self.verbose=verbose
+        self.verbose = verbose
 
     def fit(self, X, y=None):
         """
@@ -119,26 +126,39 @@ class PALD(ClusterMixin, BaseEstimator):
             D = pairwise_distances(X, metric=self.metric)
         print("Computing cohesion matrix") if self.verbose else None
         with ProgressBar(
-            total = D.shape[0]*(D.shape[0]-1)//2,
-            disable = not self.verbose,
+            total=D.shape[0] * (D.shape[0] - 1) // 2,
+            disable=not self.verbose,
         ) as progress_bar:
             self.cohesion_ = cohesion(D, progress_bar)
         print("Clustering") if self.verbose else None
         symmetric_cohesion = np.minimum(self.cohesion_, self.cohesion_.T)
         if self.cluster_selection_method in ["strong", "threshold"]:
-            self.threshold_ = np.mean(np.diagonal(self.cohesion_)) / 2 if self.cluster_selection_method == "strong" else self.threshold
+            self.threshold_ = (
+                np.mean(np.diagonal(self.cohesion_)) / 2
+                if self.cluster_selection_method == "strong"
+                else self.threshold
+            )
             symmetric_cohesion[symmetric_cohesion < self.threshold_] = 0
             self.labels_ = sp.csgraph.connected_components(symmetric_cohesion)[1]
         elif self.cluster_selection_method == "threshold":
             if self.threshold is None:
-                raise ValueError("Must set a threshold value if using cluster_selection_method is threshold.")
+                raise ValueError(
+                    "Must set a threshold value if using cluster_selection_method is threshold."
+                )
             self.labels_ = threshold_clusters(self.cohesion)
         elif self.cluster_selection_method in ["eom", "leaf"]:
-            self.labels_, self.condensed_tree_ = hslc(self.cohesion_, self.cluster_selection_method, self.min_cluster_size)
+            self.labels_, self.condensed_tree_ = hslc(
+                self.cohesion_, self.cluster_selection_method, self.min_cluster_size
+            )
         else:
-            raise ValueError(f"cluster_selection_method should be one of 'average', 'eom', or 'leaf'. Got {self.cluster_selection_method}")
+            raise ValueError(
+                f"cluster_selection_method should be one of 'average', 'eom', or 'leaf'. Got {self.cluster_selection_method}"
+            )
 
-        if self.min_cluster_size > 1 and self.cluster_selection_method not in ["eom", "leaf"]:
+        if self.min_cluster_size > 1 and self.cluster_selection_method not in [
+            "eom",
+            "leaf",
+        ]:
             prune_clusters(self.labels_, self.min_cluster_size)
 
         self.n_features_in_ = X.shape[1]

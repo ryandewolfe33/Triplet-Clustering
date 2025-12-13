@@ -23,6 +23,7 @@ def data():
     )
     yield X
 
+
 def test_paknnld_eom(data):
     paknnld = PAKNNLD(n_neighbors=3)
     paknnld.fit(data)
@@ -38,7 +39,9 @@ def test_paknnld_cc(data):
 
 
 def test_paknnld_leaf(data):
-    paknnld = PAKNNLD(n_neighbors=3, cluster_selection_method="leaf", min_cluster_size=2)
+    paknnld = PAKNNLD(
+        n_neighbors=3, cluster_selection_method="leaf", min_cluster_size=2
+    )
     paknnld.fit(data)
     assert hasattr(paknnld, "is_fitted_")
     np.testing.assert_equal(paknnld.labels_, [1, 1, 1, 1, 0, 0, 0, -1])
