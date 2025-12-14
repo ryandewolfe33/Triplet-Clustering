@@ -1,4 +1,7 @@
-# PALD.py
+# Triplet Clustering
+A collection of clustering algorithms based on triplet comparisons (x is more similar to y than to x).
+
+# Currently under renovation
 
 This is a pure python implementation of two clustering algorithms based off the paper *A social perspective on perceived distances reveals deep community structure*. 
 
