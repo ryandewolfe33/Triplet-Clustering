@@ -22,6 +22,7 @@ dependencies = [
     "numpy >= 2.0",
     "scipy >= 1.16",
     "numba >= 0.60.0",
+    "numba-progress >= 1.2.0",
     "scikit-learn >= 1.6",
     "pynndescent >= 0.5.3",
     "fast_hdbscan >= 0.2.2",
