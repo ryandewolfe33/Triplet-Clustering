@@ -4,7 +4,7 @@ from numba import njit, prange
 from numba_progress import ProgressBar
 
 
-#TODO check parallel
+# TODO check parallel
 @njit(nogil=True, fastmath=True)
 def cohesion(D, progress_bar):
     """

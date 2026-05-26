@@ -18,7 +18,7 @@ def eom_leaf(
     max_cluster_size=np.inf,
     allow_single_cluster=False,
     cluster_selection_epsilon=0.0,
-    ):
+):
     cluster_tree = cluster_tree_from_condensed_tree(condensed_tree)
     if cluster_selection_method == "eom":
         if semi_supervised:

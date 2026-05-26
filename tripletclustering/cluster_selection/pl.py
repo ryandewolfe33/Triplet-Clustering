@@ -97,8 +97,8 @@ def pl(
     return (
         labels,
         {
-            "cluster_layers":cluster_layers,
+            "cluster_layers": cluster_layers,
             "persistence_scores": persistence_scores,
-            "sizes": sizes
-        }
+            "sizes": sizes,
+        },
     )

@@ -2,9 +2,10 @@ from numba import njit
 import numpy as np
 import scipy.sparse as sp
 
+
 @njit
 def extract_flat_from_condensed_tree(
-    condensed_tree, # Works for either condensed or cluster tree
+    condensed_tree,  # Works for either condensed or cluster tree
     cut_value,
 ):
     # Sort by lambda
@@ -45,18 +46,15 @@ def compute_rbl_cut_value(similarity):
     edge_weights = triu.data
     edge_count, cut_values = np.histogram(edge_weights, bins=np.ptp(edge_weights))
     kept_edges = np.cumsum(edge_count)
-    cut_value = cut_values[np.searchsorted(kept_edges, n, side="right")]  
+    cut_value = cut_values[np.searchsorted(kept_edges, n, side="right")]
     return cut_value
 
-def flat(
-    condensed_tree,
-    similarity,
-    cut_value
-):
+
+def flat(condensed_tree, similarity, cut_value):
     if cut_value == "pald":
         cut_value = compute_pald_cut_value(similarity)
     elif cut_value == "rbl":
-        cut_value = compute_rbl_cut_value(similarity)  
+        cut_value = compute_rbl_cut_value(similarity)
     elif not np.issubdtype(type(cut_value), float):
         raise ValueError("Unknown cut_value type.")
     selected_clusters = extract_flat_from_condensed_tree(condensed_tree, cut_value)

@@ -17,7 +17,14 @@ def csc_lookup(indptr, indices, data, i, j):
 
 
 @njit(nogil=True, parallel=True)
-def in_sway(ood_indptr, ood_indices, ood_data, mutual_friends_row, mutual_friends_col, progress_bar):
+def in_sway(
+    ood_indptr,
+    ood_indices,
+    ood_data,
+    mutual_friends_row,
+    mutual_friends_col,
+    progress_bar,
+):
     # Linkage graph is same vertices, non-negative integer edge weights
     n_mutual_friends = len(mutual_friends_row)
     row_ind = np.empty(n_mutual_friends, dtype="int32")
@@ -62,7 +69,12 @@ def rbl(ood: sp.sparray, verbose=False):
     ) as progress_bar:
         ood_csc = ood.tocsc()
         row_ind, col_ind, data = in_sway(
-            ood_csc.indptr, ood_csc.indices, ood_csc.data, mutual_friends.row, mutual_friends.col, progress_bar
+            ood_csc.indptr,
+            ood_csc.indices,
+            ood_csc.data,
+            mutual_friends.row,
+            mutual_friends.col,
+            progress_bar,
         )
     similarity = sp.coo_array(
         (data, (row_ind, col_ind)), shape=(ood.shape[0], ood.shape[0])
