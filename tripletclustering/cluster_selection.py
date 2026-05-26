@@ -1,3 +1,5 @@
+# Dendrogram cluster selection wrappers
+
 import numpy as np
 import scipy.sparse as sp
 from numba import njit
