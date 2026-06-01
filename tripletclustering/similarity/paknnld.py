@@ -36,4 +36,5 @@ def paknnld(ood, verbose=False):
         similarity.data = cohesion(
             similarity.indptr, similarity.indices, similarity.data, progress_bar
         )
+    similarity = similarity.minimum(similarity.transpose()).tocsr()
     return similarity

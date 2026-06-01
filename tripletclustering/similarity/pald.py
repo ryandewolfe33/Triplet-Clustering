@@ -42,4 +42,5 @@ def pald(ood, verbose=False):
         disable=not verbose,
     ) as progress_bar:
         similarity = cohesion(ood, progress_bar)
+    similarity = np.minimum(similarity, similarity.transpose())
     return similarity
