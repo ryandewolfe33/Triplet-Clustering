@@ -1,7 +1,6 @@
 # Triplet Clustering
 
 [![Build Status](https://github.com/ryandewolfe33/tripletclustering/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ryandewolfe33/tripletclustering/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/ryandewolfe33/tripletclustering/branch/main/graph/badge.svg)](https://codecov.io/gh/ryandewolfe33/tripletclustering)
 
 A collection of clustering algorithms based on triplet comparisons (x is more similar to y than to z).
 
