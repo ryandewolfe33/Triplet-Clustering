@@ -23,6 +23,7 @@ def build_mst(similarity: sp.sparray | np.ndarray) -> np.ndarray:
     if similarity.shape == (0, 0):
         return np.empty((0, 3))
     similarity = sp.csr_array(similarity)
+    similarity = similarity.minimum(similarity.transpose())
     similarity.eliminate_zeros()
     similarity.data = 1 / similarity.data
     mst = sp.csgraph.minimum_spanning_tree(similarity)
