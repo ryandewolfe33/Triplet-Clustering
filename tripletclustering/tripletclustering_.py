@@ -39,9 +39,47 @@ def build_mst(similarity: sp.sparray | np.ndarray) -> np.ndarray:
 
 
 class TripletClustering(ClusterMixin, BaseEstimator):
-    """
-    An unsupervised clustering algorithm for comparator data. Data can be passed as distances or
-    vectors (and neighbors will be ranked by distance).
+    """ Clustering algorithm based on triplet comparisons.
+
+    Parameters:
+    -----------
+
+    similarity_method: string (optional, default "rbl")
+        The method used to measure similarity between points. Options are "rbl" for rank-based-linkage,
+        "pald" for partitoned-local-depth, or "paknnld" for partitioned-k-nearest-neighbor-local-depth.
+    
+    cluster_selection_method: string (optional, default "eom)
+        The method used to select clusters from the condensed single linkage dendrogram. Options are
+        "eom" for excess of mass, "leaf", "pl" for persistent leaves, or "flat" for a flat horizontal cut.
+
+    min_cluster_size: int (optional, default 15)
+        Minimum cluster size used to prune the single linkage dendrogram.
+    
+    cut_value: str | float (optional, default "method")
+        Method or value to cut the condensed dendrogram at; only used when cluster_selection_method="flat".
+        Options are "pald", "rbl", "method" (used to pass the similarity_method), or a positive value.
+    
+    metric: str (optional, default "cosine")
+        Metric to determine the distance between points. Will be passed to pynndescent or sklearn's pairwise distances.
+
+    n_neighbors: int (optional, default 15)
+        The number of nearest neighbors to rank in the out-ordered digraph for the "rbl" and "paknnld" similarity methods.
+
+    knn_kwargs: dict (optional)
+        Key word arguments that are passed to pynndescent. Must not contain random_state, n_neighbors, or metric.
+    
+    cluster_selection_kwargs: dict (optional)
+        Key word arguments that are passed to the cluster selection method.
+    
+    save_steps: tuple (optional)
+        Flag to save certain intermediate steps for later processing or visualization. Can include
+        ("similarity", "linkage_tree", "condensed_tree").
+    
+    random_state: int | np.random.RandomState | np.random.Generator (optional)
+        Random state; only used in pynndescent.
+    
+    verbose: bool (optional, default False)
+        Flag to print progress messages and progress bars.
     """
 
     def __init__(
@@ -49,14 +87,14 @@ class TripletClustering(ClusterMixin, BaseEstimator):
         similarity_method: str = "rbl",
         cluster_selection_method: str = "eom",
         min_cluster_size: int = 15,
-        cut_value: str | float | None = "method",
+        cut_value: str | float = "method",
         metric: str = "cosine",
-        n_neighbors: int = 15,
+        n_neighbors: int = 50,
         knn_kwargs: dict | None = None,
         cluster_selection_kwargs: dict | None = None,
         save_steps: tuple | None = None,
         random_state: int | np.random.RandomState | np.random.Generator | None = None,
-        verbose=False,
+        verbose: bool = False,
     ):
         self.similarity_method = similarity_method
         self.cluster_selection_method = cluster_selection_method
