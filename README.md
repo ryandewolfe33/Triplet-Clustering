@@ -61,7 +61,7 @@ The Ranked-Based-Linkage similarity measure also only uses the K-nearest-neighbo
 
 ### Excess of Mass (eom)
 Select non-overlapping clusters to maximize the area on the condensed dendrogram.
-> R.J.G.B. Campello, D. Moulavi, and J. Sander. Density-Based Clustering Based on Hierarchical Density Estimates. In: Advances in Knowledge Discovery and Data Mining. PAKDD 2013. Volume 7819 of Lecture Notes in Computer Science() (2013) - https://doi-org.ezproxy.lib.torontomu.ca/10.1007/978-3-642-37456-2_14
+> R.J.G.B. Campello, D. Moulavi, and J. Sander. Density-Based Clustering Based on Hierarchical Density Estimates. In: Advances in Knowledge Discovery and Data Mining. PAKDD 2013. Volume 7819 of Lecture Notes in Computer Science() (2013) - https://doi.org/10.1007/978-3-642-37456-2_14
 
 ### Leaf
 Return the leaves of the condensed dendrogram.
