@@ -34,14 +34,14 @@ def pl(
 
     print("Finding optimal resolution layers ...") if verbose else None
 
-    leaves = extract_leaves(condensed_tree)
-    clusters = get_cluster_label_vector(condensed_tree, leaves, 0.0, n_samples)
-
     mask = condensed_tree.child >= n_samples
     cluster_tree = mask_condensed_tree(condensed_tree, mask)
 
     # Check if cluster_tree is valid before processing
     if len(cluster_tree.child) > 0 and cluster_tree.child[-1] >= n_samples:
+        leaves = extract_leaves(condensed_tree)
+        clusters = get_cluster_label_vector(condensed_tree, leaves, 0.0, n_samples)
+
         births, deaths, parents, lambda_deaths = min_cluster_size_barcode(
             cluster_tree, n_samples, min_cluster_size
         )
@@ -51,6 +51,7 @@ def pl(
         peaks = find_peaks(total_persistence)
     else:
         # Handle empty or invalid cluster tree
+        clusters = np.full(n_samples, -1)
         births = np.array([])
         deaths = np.array([])
         parents = np.array([])
