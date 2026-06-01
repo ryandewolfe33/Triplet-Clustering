@@ -85,12 +85,12 @@ class TripletClustering(ClusterMixin, BaseEstimator):
 
     def __init__(
         self,
-        similarity_method: str = "rbl",
-        cluster_selection_method: str = "eom",
+        similarity_method: str = "paknnld",
+        cluster_selection_method: str = "pl",
         min_cluster_size: int = 15,
         cut_value: str | float = "method",
-        metric: str = "cosine",
-        n_neighbors: int = 50,
+        metric: str = "euclidean",
+        n_neighbors: int = 15,
         knn_kwargs: dict | None = None,
         cluster_selection_kwargs: dict | None = None,
         save_steps: tuple | None = None,
@@ -195,6 +195,7 @@ class TripletClustering(ClusterMixin, BaseEstimator):
         condensed_tree = condense_tree(
             linkage_tree, min_cluster_size=self.min_cluster_size
         )
+
         print("Selecting Clusters") if self.verbose else None
         cluster_selection_kwargs = (
             self.cluster_selection_kwargs
@@ -222,7 +223,7 @@ class TripletClustering(ClusterMixin, BaseEstimator):
         elif self.cluster_selection_method == "pl":
             from .cluster_selection.pl import pl
 
-            self.labels_, self.extras = pl(
+            self.labels_, self.extras_ = pl(
                 condensed_tree, n, self.min_cluster_size, n, **cluster_selection_kwargs
             )
             selected_clusters = None
