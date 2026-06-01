@@ -4,7 +4,7 @@ A collection of clustering algorithms based on triplet comparisons (x is more si
 ## Getting Started
 For now the package must be cloned and locally installed.
 ```bash
-git clone git@github.com:ryandewolfe33/tripletclustering.git
+git clone https://github.com/ryandewolfe33/tripletclustering.git
 cd tripletclustering
 pip install .
 ```
@@ -14,7 +14,11 @@ pip install .
 import sklearn.datasets as data
 from tripletclustering import TripletClustering
 moons, _ = data.make_moons(n_samples=50, noise=0.05, random_state=123)
-clusterer = TripletClustering()
+clusterer = TripletClustering(
+    similarity_method="rbl",
+    cluster_selection_method="eom",
+    min_cluster_szie=15,
+)
 labels = clusterer.fit_predict(data)
 ```
 
